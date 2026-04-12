@@ -62,7 +62,8 @@ class TestHTTPServer(unittest.TestCase):
 
     def test_index_request(self):
         response = self.send_request("GET / HTTP/1.1\r\nHost: localhost\r\n\r\n")
-        self.assertIn("200 OK", response)
+        self.assertIn("301 Moved Permanently", response)
+        self.assertIn("Location: /index.html", response)
 
     def test_index_html_request(self):
         response = self.send_request("GET /index.html HTTP/1.1\r\nHost: localhost\r\n\r\n")
@@ -84,10 +85,10 @@ class TestHTTPServer(unittest.TestCase):
         response = self.send_request(
             "GET / HTTP/1.1\r\nHost: localhost\r\nIf-Modified-Since: Mon, 01 Jan 2024 00:00:00 GMT\r\n\r\n"
         )
-        self.assertTrue("304 Not Modified" in response or "200 OK" in response)
+        self.assertIn("301 Moved Permanently", response)
 
     def test_content_type_html(self):
-        response = self.send_request("GET / HTTP/1.1\r\nHost: localhost\r\n\r\n")
+        response = self.send_request("GET /index.html HTTP/1.1\r\nHost: localhost\r\n\r\n")
         self.assertIn("text/html", response)
 
     def test_content_type_not_found(self):
@@ -95,7 +96,6 @@ class TestHTTPServer(unittest.TestCase):
         self.assertIn("text/plain", response)
 
     def test_multithreaded_handling(self):
-        """Test that the server can handle multiple concurrent requests."""
         from concurrent.futures import ThreadPoolExecutor
 
         def make_request():
@@ -109,42 +109,33 @@ class TestHTTPServer(unittest.TestCase):
             self.assertIn("200 OK", response)
 
     def test_get_text_file(self):
-        """Test GET command for a text file."""
         response = self.send_request("GET /index.html HTTP/1.1\r\nHost: localhost\r\n\r\n")
         self.assertIn("200 OK", response)
         self.assertIn("text/html", response)
 
     def test_get_image_file(self):
-        """Test GET command for an image file."""
-        response = self.send_request("GET /src/assets/image.png HTTP/1.1\r\nHost: localhost\r\n\r\n")
+        response = self.send_request("GET /src/assets/Polyu.png HTTP/1.1\r\nHost: localhost\r\n\r\n")
         self.assertIn("200 OK", response)
         self.assertIn("image/png", response)
 
     def test_head_request(self):
-        """Test HEAD command."""
         response = self.send_request("HEAD /index.html HTTP/1.1\r\nHost: localhost\r\n\r\n")
         self.assertIn("200 OK", response)
-        self.assertNotIn("<!DOCTYPE html>", response)  # Ensure no body is returned
+        self.assertNotIn("<!DOCTYPE html>", response)
 
     def test_response_statuses(self):
-        """Test all five response statuses."""
-        # 200 OK
         response = self.send_request("GET /index.html HTTP/1.1\r\nHost: localhost\r\n\r\n")
         self.assertIn("200 OK", response)
 
-        # 400 Bad Request
         response = self.send_request("GET HTTP/1.1\r\nHost: localhost\r\n\r\n")
         self.assertIn("400 Bad Request", response)
 
-        # 403 Forbidden
         response = self.send_request("GET /log HTTP/1.1\r\nHost: localhost\r\n\r\n")
         self.assertIn("403 Forbidden", response)
 
-        # 404 Not Found
         response = self.send_request("GET /nonexistent.html HTTP/1.1\r\nHost: localhost\r\n\r\n")
         self.assertIn("404 Not Found", response)
 
-        # 304 Not Modified
         response = self.send_request(
             "GET /index.html HTTP/1.1\r\nHost: localhost\r\nIf-Modified-Since: Mon, 01 Jan 2024 00:00:00 GMT\r\n\r\n"
         )
@@ -155,20 +146,16 @@ class TestHTTPServer(unittest.TestCase):
         response = self.send_request("GET /index.html HTTP/1.1\r\nHost: localhost\r\n\r\n")
         self.assertIn("Last-Modified", response)
 
-        # If-Modified-Since
         response = self.send_request(
             "GET /index.html HTTP/1.1\r\nHost: localhost\r\nIf-Modified-Since: Mon, 01 Jan 2024 00:00:00 GMT\r\n\r\n"
         )
         self.assertTrue("304 Not Modified" in response or "200 OK" in response)
 
     def test_connection_header(self):
-        """Test Connection header for keep-alive and close."""
-        # Persistent connection
         response = self.send_request("GET /index.html HTTP/1.1\r\nHost: localhost\r\nConnection: keep-alive\r\n\r\n")
         self.assertIn("200 OK", response)
         self.assertIn("Connection: keep-alive", response)
 
-        # Non-persistent connection
         response = self.send_request("GET /index.html HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n")
         self.assertIn("200 OK", response)
         self.assertIn("Connection: close", response)

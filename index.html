@@ -18,13 +18,18 @@
             background-color: #f4f4f9;
             position: relative;
         }
-        img {
-            max-width: 100%;
-            height: auto;
+        .logo-row {
             position: absolute;
-            bottom: 0;
-            left: 0;
-            margin: 10px;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .logo-row img {
+            height: 80px;
+            width: auto;
         }
         p {
             margin: 10px 0;
@@ -36,11 +41,15 @@
         <h1>Welcome to COMP2322!</h1>
     </header>
     <main>
-        <p>This is the server side of the socket programming assignment.</p>
-        <img src="./src/assets/Polyu.png" alt="PolyU Logo">
-        <p><a href="https://www.polyu.edu.hk" target="_blank">Visit PolyU Website</a></p>
-        <p><a href="./log/server.log" target="_blank">View Log File</a></p>
-        <p><a href="./Page2.html" target="_blank">Visit other page</a></p>
+        <p>This is the home page of the socket programming assignment.</p>
+        <div class="logo-row">
+            <img src="./src/assets/Polyu.png" alt="PolyU Logo">
+            <img src="./src/assets/Fcms.png" alt="FCMS Logo">
+            <img src="./src/assets/Comp.png" alt="COMP Logo">
+        </div>
+        <p><a href="https://www.polyu.edu.hk">Visit PolyU Website</a></p>
+        <p><a href="./log/server.log">View Log File</a></p>
+        <p><a href="./Page2.html">Visit other page</a></p>
     </main>
 </body>
 </html>

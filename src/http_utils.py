@@ -45,7 +45,6 @@ def serve_file(file_path):
         if not mime_type:
             mime_type = "application/octet-stream"
 
-        # Read the file content
         with open(file_path, "rb") as f:
             content = f.read()
         headers = {

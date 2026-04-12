@@ -1,6 +1,8 @@
 
 def build_response(status, body="", extra_headers=None):
     response = response_handle(status, extra_headers)
+    if isinstance(body, bytes):
+        return response.encode("utf-8") + body
     return response + body
 
 def response_handle(status, extra_headers=None):
@@ -33,6 +35,11 @@ def response_handle(status, extra_headers=None):
         case 304:
             return (
                 "HTTP/1.1 304 Not Modified\r\n"
+                f"{headers}\r\n"
+            )
+        case 301:
+            return (
+                "HTTP/1.1 301 Moved Permanently\r\n"
                 f"{headers}\r\n"
             )
         case _:
