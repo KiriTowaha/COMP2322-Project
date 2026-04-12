@@ -73,7 +73,12 @@ def handle_client(connectionSocket, addr):
                     html_file_path = os.path.join(os.path.dirname(__file__), "Page2.html")
                     handle_page_request(html_file_path, headers, connectionSocket, connection_header, addr, method)
                 case path if path.startswith(("/log", "/src", "/test")):
-                    response = build_response(403, "Error 403: Forbidden.\n", {"Connection": connection_header})
+                    body = "Error 403: Forbidden.\n"
+                    response = build_response(
+                        403,
+                        body,
+                        {"Connection": connection_header, "Content-Length": str(len(body.encode("utf-8")))},
+                    )
                     write_log(addr, "403 Forbidden")
                     connectionSocket.sendall(response.encode("utf-8"))
                     if connection_header == "close":

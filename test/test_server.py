@@ -204,6 +204,15 @@ class TestHTTPServer(unittest.TestCase):
             self.assertIn(b"200 OK", data2)
             self.assertIn(b"Connection: close", data2)
 
+    def test_forbidden_log_keep_alive_has_content_length(self):
+        with socket.create_connection((self.host, self.port), timeout=2) as sock:
+            req = b"GET /log/server.log HTTP/1.1\r\nHost: localhost\r\nConnection: keep-alive\r\n\r\n"
+            sock.sendall(req)
+            response = sock.recv(4096).decode("utf-8", errors="replace")
+            self.assertIn("403 Forbidden", response)
+            self.assertIn("Connection: keep-alive", response)
+            self.assertIn("Content-Length: 22", response)
+
 
 if __name__ == "__main__":
     unittest.main()

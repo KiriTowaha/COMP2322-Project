@@ -1,6 +1,12 @@
 
 def build_response(status, body="", extra_headers=None):
-    response = response_handle(status, extra_headers)
+    headers = dict(extra_headers or {})
+    if "Content-Length" not in headers:
+        if isinstance(body, bytes):
+            headers["Content-Length"] = str(len(body))
+        else:
+            headers["Content-Length"] = str(len(body.encode("utf-8")))
+    response = response_handle(status, headers)
     if isinstance(body, bytes):
         return response.encode("utf-8") + body
     return response + body
