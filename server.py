@@ -16,7 +16,7 @@ print ("Socket is listening")
 
 def handle_client(connectionSocket, addr):    
     print("Connection from", addr)
-    while True:  
+    while True:
         try:
             connection_header = "close"
             message = connectionSocket.recv(1024).decode(errors="replace")
@@ -39,33 +39,34 @@ def handle_client(connectionSocket, addr):
                 break
 
             method, path, version = request_parts
-            if not path.startswith("/") or not version.startswith("HTTP/"):
+            if method not in ("GET", "HEAD") or not path.startswith("/") or not version.startswith("HTTP/"):
                 response = build_response(400, "Error: Bad Request.\n", {"Connection": connection_header})
                 write_log(addr, "400 Bad Request")
                 connectionSocket.sendall(response.encode("utf-8"))
-                break
+                if connection_header == "close":
+                    break
+                continue
             headers = get_request_headers(request_lines)
             connection_header = headers.get("connection", "close").lower()
 
             if path.startswith("/src/assets/"):
                 file_path = os.path.join(os.path.dirname(__file__), path.lstrip("/"))
                 status, content, extra_headers = serve_file(file_path)
+                if status not in (200, 404):
+                    status, content, extra_headers = 400, b"Error: Bad Request.\n", {
+                        "Content-Type": "text/plain; charset=utf-8",
+                        "Content-Length": str(len(b"Error: Bad Request.\n")),
+                    }
                 extra_headers["Connection"] = connection_header
                 body = b"" if method == "HEAD" else content
                 response = build_response(status, body, extra_headers)
                 write_log(addr, f"{status} {'OK' if status == 200 else 'Error'}")
                 connectionSocket.sendall(response if isinstance(response, bytes) else response.encode("utf-8"))
-                break
+                if connection_header == "close":
+                    break
+                continue
             match path:
-                case "/":
-                    response = build_response(
-                        301,
-                        "",
-                        {"Location": "/index.html", "Connection": connection_header},
-                    )
-                    write_log(addr, "301 Moved Permanently")
-                    connectionSocket.sendall(response.encode("utf-8"))
-                case "/index.html":
+                case "/" | "/index.html":
                     html_file_path = os.path.join(os.path.dirname(__file__), "index.html")
                     handle_page_request(html_file_path, headers, connectionSocket, connection_header, addr, method)
                 case "/Page2.html":
@@ -83,7 +84,9 @@ def handle_client(connectionSocket, addr):
                     connectionSocket.sendall(response.encode("utf-8"))
                     if connection_header == "close":
                         break
-            break
+            if connection_header == "close":
+                break
+            continue
         except Exception as e:
             print(f"Error handling client: {e}")
             break

@@ -11,7 +11,7 @@ def handle_page_request(html_file_path, headers, connectionSocket, connection_he
         if if_modified_since:
             try:
                 modified_since_time = parse_http_date(if_modified_since)
-                if modified_since_time.replace(microsecond=0) <= last_modified:
+                if last_modified <= modified_since_time.replace(microsecond=0):
                     response = build_response(
                         304,
                         extra_headers={
@@ -31,10 +31,15 @@ def handle_page_request(html_file_path, headers, connectionSocket, connection_he
             html_content = f.read()
 
         body = "" if method == "HEAD" else html_content
+        content_length = len(html_content.encode("utf-8"))
         response = build_response(
             200,
             body,
-            {"Last-Modified": last_modified_text, "Connection": connection_header},
+            {
+                "Last-Modified": last_modified_text,
+                "Content-Length": str(content_length),
+                "Connection": connection_header,
+            },
         )
         write_log(addr, "200 OK")
         connectionSocket.sendall(response.encode("utf-8"))

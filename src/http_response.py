@@ -37,11 +37,6 @@ def response_handle(status, extra_headers=None):
                 "HTTP/1.1 304 Not Modified\r\n"
                 f"{headers}\r\n"
             )
-        case 301:
-            return (
-                "HTTP/1.1 301 Moved Permanently\r\n"
-                f"{headers}\r\n"
-            )
         case _:
             return (
                 "HTTP/1.1 500 Internal Server Error\r\nContent-Type: text/plain; charset=utf-8\r\n"

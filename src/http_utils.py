@@ -57,5 +57,5 @@ def serve_file(file_path):
     except FileNotFoundError:
         return 404, b"Error: File not found.\n", {"Content-Type": "text/plain"}
 
-    except Exception as e:
-        return 500, f"Error: {str(e)}\n".encode("utf-8"), {"Content-Type": "text/plain"}
+    except OSError:
+        return 404, b"Error: File not found.\n", {"Content-Type": "text/plain"}
