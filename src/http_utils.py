@@ -1,5 +1,6 @@
 import os
 import datetime
+import mimetypes
 
 def get_request_headers(request_lines):
     headers = {}
@@ -38,3 +39,24 @@ def get_last_modified(file_path):
         os.path.getmtime(file_path), tz=datetime.timezone.utc
     )
     return modified_time.replace(microsecond=0)
+def serve_file(file_path):
+    try:
+        mime_type, _ = mimetypes.guess_type(file_path)
+        if not mime_type:
+            mime_type = "application/octet-stream"
+
+        # Read the file content
+        with open(file_path, "rb") as f:
+            content = f.read()
+        headers = {
+            "Content-Type": mime_type,
+            "Content-Length": str(len(content))
+        }
+
+        return 200, content, headers
+
+    except FileNotFoundError:
+        return 404, b"Error: File not found.\n", {"Content-Type": "text/plain"}
+
+    except Exception as e:
+        return 500, f"Error: {str(e)}\n".encode("utf-8"), {"Content-Type": "text/plain"}
