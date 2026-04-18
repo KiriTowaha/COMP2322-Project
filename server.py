@@ -1,6 +1,7 @@
 import os, socket, threading
 from src import (
     build_response,
+    build_text_response,
     get_request_headers,
     write_log, serve_file, handle_page_request
 )
@@ -26,21 +27,21 @@ def handle_client(connectionSocket, addr):
             print(message)
             request_lines = message.splitlines()
             if not request_lines:
-                response = build_response(400, "Error: Bad Request.\n", {"Connection": connection_header})
+                response = build_text_response(400, "Error: Bad Request.\n", connection_header)
                 write_log(addr, "400 Bad Request")
                 connectionSocket.sendall(response.encode("utf-8"))
                 break
 
             request_parts = request_lines[0].split()
             if len(request_parts) != 3:
-                response = build_response(400, "Error: Bad Request.\n", {"Connection": connection_header})
+                response = build_text_response(400, "Error: Bad Request.\n", connection_header)
                 write_log(addr, "400 Bad Request")
                 connectionSocket.sendall(response.encode("utf-8"))
                 break
 
             method, path, version = request_parts
             if method not in ("GET", "HEAD") or not path.startswith("/") or not version.startswith("HTTP/"):
-                response = build_response(400, "Error: Bad Request.\n", {"Connection": connection_header})
+                response = build_text_response(400, "Error: Bad Request.\n", connection_header, method=method)
                 write_log(addr, "400 Bad Request")
                 connectionSocket.sendall(response.encode("utf-8"))
                 if connection_header == "close":
@@ -53,10 +54,12 @@ def handle_client(connectionSocket, addr):
                 file_path = os.path.join(os.path.dirname(__file__), path.lstrip("/"))
                 status, content, extra_headers = serve_file(file_path)
                 if status not in (200, 404):
-                    status, content, extra_headers = 400, b"Error: Bad Request.\n", {
-                        "Content-Type": "text/plain; charset=utf-8",
-                        "Content-Length": str(len(b"Error: Bad Request.\n")),
-                    }
+                    response = build_text_response(400, "Error: Bad Request.\n", connection_header, method=method)
+                    write_log(addr, "400 Bad Request")
+                    connectionSocket.sendall(response.encode("utf-8"))
+                    if connection_header == "close":
+                        break
+                    continue
                 extra_headers["Connection"] = connection_header
                 body = b"" if method == "HEAD" else content
                 response = build_response(status, body, extra_headers)
@@ -73,18 +76,13 @@ def handle_client(connectionSocket, addr):
                     html_file_path = os.path.join(os.path.dirname(__file__), "Page2.html")
                     handle_page_request(html_file_path, headers, connectionSocket, connection_header, addr, method)
                 case path if path.startswith(("/log", "/src", "/test")):
-                    body = "Error 403: Forbidden.\n"
-                    response = build_response(
-                        403,
-                        body,
-                        {"Connection": connection_header, "Content-Length": str(len(body.encode("utf-8")))},
-                    )
+                    response = build_text_response(403, "Error 403: Forbidden.\n", connection_header, method=method)
                     write_log(addr, "403 Forbidden")
                     connectionSocket.sendall(response.encode("utf-8"))
                     if connection_header == "close":
                         break
                 case _:
-                    response = build_response(404, "Error 404: Not Found.\n", {"Connection": connection_header})
+                    response = build_text_response(404, "Error 404: Not Found.\n", connection_header, method=method)
                     write_log(addr, "404 Not Found")
                     connectionSocket.sendall(response.encode("utf-8"))
                     if connection_header == "close":

@@ -24,10 +24,7 @@ def parse_http_date(value):
     for date_format in http_date_formats:
         try:
             parsed = datetime.datetime.strptime(value, date_format)
-            if date_format == "%a %b %d %H:%M:%S %Y":
-                parsed = parsed.replace(tzinfo=datetime.timezone.utc)
-            else:
-                parsed = parsed.replace(tzinfo=datetime.timezone.utc)
+            parsed = parsed.replace(tzinfo=datetime.timezone.utc)
             return parsed
         except ValueError:
             continue

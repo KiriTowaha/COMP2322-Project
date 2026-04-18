@@ -2,3 +2,4 @@ __pycache__/
 log/server.log
 src/__pycache__/
 *.pyc
+.replit

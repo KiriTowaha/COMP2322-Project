@@ -1,5 +1,5 @@
 from .http_utils import get_last_modified, format_http_date, parse_http_date
-from .http_response import build_response
+from .http_response import build_response, build_text_response
 from .log import write_log
 
 def handle_page_request(html_file_path, headers, connectionSocket, connection_header, addr, method):
@@ -45,14 +45,6 @@ def handle_page_request(html_file_path, headers, connectionSocket, connection_he
         connectionSocket.sendall(response.encode("utf-8"))
 
     except FileNotFoundError:
-        body = "Error: File not found.\n"
-        response = build_response(
-            404,
-            body,
-            {
-                "Content-Length": str(len(body.encode("utf-8"))),
-                "Connection": connection_header,
-            },
-        )
+        response = build_text_response(404, "Error: File not found.\n", connection_header, method=method)
         write_log(addr, "404 Not Found")
         connectionSocket.sendall(response.encode("utf-8"))

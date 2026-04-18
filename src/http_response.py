@@ -11,8 +11,16 @@ def build_response(status, body="", extra_headers=None):
         return response.encode("utf-8") + body
     return response + body
 
+def build_text_response(status, body, connection_header, method="GET", extra_headers=None):
+    headers = dict(extra_headers or {})
+    headers["Connection"] = connection_header
+    if "Content-Length" not in headers:
+        headers["Content-Length"] = str(len(body.encode("utf-8")))
+    payload = "" if method == "HEAD" else body
+    return build_response(status, payload, headers)
+
 def response_handle(status, extra_headers=None):
-    header_lines = []
+    header_lines = [] 
     if extra_headers:
         for name, value in extra_headers.items():
             header_lines.append(f"{name}: {value}\r\n")
@@ -45,6 +53,6 @@ def response_handle(status, extra_headers=None):
             )
         case _:
             return (
-                "HTTP/1.1 500 Internal Server Error\r\nContent-Type: text/plain; charset=utf-8\r\n"
+                "HTTP/1.1 400 Bad Request\r\nContent-Type: text/plain; charset=utf-8\r\n"
                 f"{headers}\r\n"
             )

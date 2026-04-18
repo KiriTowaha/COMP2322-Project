@@ -12,4 +12,4 @@ def write_log(client_ip, status):
     with log_lock:
         with open(LOG_FILE, "a") as log:
             time_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            log.write(f"{client_ip} | {time_str} | {status}\n")
+            log.write(f"{time_str} | {client_ip} | {status}\n")

@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 class TestHTTPServer(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.host = "127.0.0.1"
+        cls.host = "127.0.1"
         cls.port = 80
 
         env = os.environ.copy()
@@ -44,7 +44,7 @@ class TestHTTPServer(unittest.TestCase):
             except subprocess.TimeoutExpired:
                 cls.server_proc.kill()
 
-    def send_request(self, request_text):
+    def request_text(self, request_text):
         try:
             with socket.create_connection((self.host, self.port), timeout=2) as sock:
                 sock.sendall(request_text.encode("utf-8"))
@@ -58,7 +58,7 @@ class TestHTTPServer(unittest.TestCase):
         except Exception as e:
             return f"Connection error: {e}"
 
-    def send_request_raw(self, request_bytes):
+    def request_raw(self, request_bytes):
         with socket.create_connection((self.host, self.port), timeout=2) as sock:
             sock.sendall(request_bytes)
             chunks = []
@@ -69,47 +69,47 @@ class TestHTTPServer(unittest.TestCase):
                 chunks.append(data)
         return b"".join(chunks)
 
-    def test_index_request(self):
-        response = self.send_request("GET / HTTP/1.1\r\nHost: localhost\r\n\r\n")
+    def test_root(self):
+        response = self.request_text("GET / HTTP/1.1\r\nHost: localhost\r\n\r\n")
+        self.assertIn("200 OK", response)
+    def test_index_html(self):
+        response = self.request_text("GET /index.html HTTP/1.1\r\nHost: localhost\r\n\r\n")
         self.assertIn("200 OK", response)
     def test_index_html_request(self):
-        response = self.send_request("GET /index.html HTTP/1.1\r\nHost: localhost\r\n\r\n")
-        self.assertIn("200 OK", response)
-    def test_index_html_request(self):
-        response = self.send_request("GET /index.html HTTP/1.1\r\nHost: localhost\r\n\r\n")
+        response = self.request_text("GET /index.html HTTP/1.1\r\nHost: localhost\r\n\r\n")
         self.assertIn("200 OK", response)
 
-    def test_not_found(self):
-        response = self.send_request("GET /nonexistent.html HTTP/1.1\r\nHost: localhost\r\n\r\n")
+    def test_404(self):
+        response = self.request_text("GET /nonexistent.html HTTP/1.1\r\nHost: localhost\r\n\r\n")
         self.assertIn("404 Not Found", response)
 
-    def test_forbidden_log_access(self):
-        response = self.send_request("GET /log HTTP/1.1\r\nHost: localhost\r\n\r\n")
+    def test_403_log(self):
+        response = self.request_text("GET /log HTTP/1.1\r\nHost: localhost\r\n\r\n")
         self.assertIn("403 Forbidden", response)
 
-    def test_bad_request_no_path(self):
-        response = self.send_request("GET HTTP/1.1\r\nHost: localhost\r\n\r\n")
+    def test_400_bad_request(self):
+        response = self.request_text("GET HTTP/1.1\r\nHost: localhost\r\n\r\n")
         self.assertIn("400 Bad Request", response)
 
-    def test_if_modified_since_header(self):
-        response = self.send_request(
+    def test_if_modified_since(self):
+        response = self.request_text(
             "GET / HTTP/1.1\r\nHost: localhost\r\nIf-Modified-Since: Mon, 01 Jan 2024 00:00:00 GMT\r\n\r\n"
         )
         self.assertIn("200 OK", response)
 
-    def test_content_type_html(self):
-        response = self.send_request("GET /index.html HTTP/1.1\r\nHost: localhost\r\n\r\n")
+    def test_html_type(self):
+        response = self.request_text("GET /index.html HTTP/1.1\r\nHost: localhost\r\n\r\n")
         self.assertIn("text/html", response)
 
-    def test_content_type_not_found(self):
-        response = self.send_request("GET /missing HTTP/1.1\r\nHost: localhost\r\n\r\n")
+    def test_not_found_type(self):
+        response = self.request_text("GET /missing HTTP/1.1\r\nHost: localhost\r\n\r\n")
         self.assertIn("text/plain", response)
 
-    def test_multithreaded_handling(self):
+    def test_multi_clients(self):
         from concurrent.futures import ThreadPoolExecutor
 
         def make_request():
-            return self.send_request("GET /index.html HTTP/1.1\r\nHost: localhost\r\n\r\n")
+            return self.request_text("GET /index.html HTTP/1.1\r\nHost: localhost\r\n\r\n")
 
         with ThreadPoolExecutor(max_workers=5) as executor:
             futures = [executor.submit(make_request) for _ in range(5)]
@@ -118,73 +118,88 @@ class TestHTTPServer(unittest.TestCase):
         for response in responses:
             self.assertIn("200 OK", response)
 
-    def test_get_text_file(self):
-        response = self.send_request("GET /index.html HTTP/1.1\r\nHost: localhost\r\n\r\n")
+    def test_get_html(self):
+        response = self.request_text("GET /index.html HTTP/1.1\r\nHost: localhost\r\n\r\n")
         self.assertIn("200 OK", response)
         self.assertIn("text/html", response)
 
-    def test_get_image_file(self):
-        response = self.send_request_raw(b"GET /src/assets/Polyu.png HTTP/1.1\r\nHost: localhost\r\n\r\n")
+    def test_get_image(self):
+        response = self.request_raw(b"GET /src/assets/Polyu.png HTTP/1.1\r\nHost: localhost\r\n\r\n")
         self.assertIn(b"200 OK", response)
         self.assertIn(b"Content-Type: image/png", response)
 
-    def test_head_request(self):
-        response = self.send_request("HEAD /index.html HTTP/1.1\r\nHost: localhost\r\n\r\n")
+    def test_get_text_file(self):
+        response = self.request_text("GET /src/assets/motto.txt HTTP/1.1\r\nHost: localhost\r\n\r\n")
+        self.assertIn("200 OK", response)
+        self.assertIn("Content-Type: text/plain", response)
+        self.assertIn("Our Motto", response)
+
+    def test_head(self):
+        response = self.request_text("HEAD /index.html HTTP/1.1\r\nHost: localhost\r\n\r\n")
         self.assertIn("200 OK", response)
         self.assertNotIn("<!DOCTYPE html>", response)
 
-    def test_response_statuses(self):
-        response = self.send_request("GET /index.html HTTP/1.1\r\nHost: localhost\r\n\r\n")
+    def test_status_codes(self):
+        response = self.request_text("GET /index.html HTTP/1.1\r\nHost: localhost\r\n\r\n")
         self.assertIn("200 OK", response)
 
-        response = self.send_request("GET HTTP/1.1\r\nHost: localhost\r\n\r\n")
+        response = self.request_text("GET HTTP/1.1\r\nHost: localhost\r\n\r\n")
         self.assertIn("400 Bad Request", response)
 
-        response = self.send_request("GET /log HTTP/1.1\r\nHost: localhost\r\n\r\n")
+        response = self.request_text("GET /log HTTP/1.1\r\nHost: localhost\r\n\r\n")
         self.assertIn("403 Forbidden", response)
 
-        response = self.send_request("GET /nonexistent.html HTTP/1.1\r\nHost: localhost\r\n\r\n")
+        response = self.request_text("GET /nonexistent.html HTTP/1.1\r\nHost: localhost\r\n\r\n")
         self.assertIn("404 Not Found", response)
 
-        response = self.send_request(
+        response = self.request_text(
             "GET /index.html HTTP/1.1\r\nHost: localhost\r\nIf-Modified-Since: Mon, 01 Jan 2024 00:00:00 GMT\r\n\r\n"
         )
         self.assertIn("200 OK", response)
 
-    def test_not_modified_304(self):
-        initial = self.send_request("GET /index.html HTTP/1.1\r\nHost: localhost\r\n\r\n")
+    def test_304(self):
+        initial = self.request_text("GET /index.html HTTP/1.1\r\nHost: localhost\r\n\r\n")
         self.assertIn("Last-Modified:", initial)
         last_modified = next(
             line.split(": ", 1)[1]
             for line in initial.split("\r\n")
             if line.lower().startswith("last-modified:")
         )
-        response = self.send_request(
+        response = self.request_text(
             f"GET /index.html HTTP/1.1\r\nHost: localhost\r\nIf-Modified-Since: {last_modified}\r\n\r\n"
         )
         self.assertIn("304 Not Modified", response)
 
-    def test_last_modified_header(self):
-        response = self.send_request("GET /index.html HTTP/1.1\r\nHost: localhost\r\n\r\n")
-        self.assertIn("Last-Modified", response)
+    def test_last_modified(self):
+        first = self.request_text("GET /index.html HTTP/1.1\r\nHost: localhost\r\n\r\n")
+        self.assertIn("200 OK", first)
+        self.assertIn("Last-Modified:", first)
 
-        response = self.send_request(
-            "GET /index.html HTTP/1.1\r\nHost: localhost\r\nIf-Modified-Since: Mon, 01 Jan 2024 00:00:00 GMT\r\n\r\n"
+        last_modified = next(
+            line.split(": ", 1)[1]
+            for line in first.split("\r\n")
+            if line.lower().startswith("last-modified:")
         )
-        self.assertTrue("304 Not Modified" in response or "200 OK" in response)
 
-    def test_connection_header(self):
+        second = self.request_text(
+            f"GET /index.html HTTP/1.1\r\n"
+            f"Host: localhost\r\n"
+            f"If-Modified-Since: {last_modified}\r\n\r\n"
+        )
+        self.assertIn("304 Not Modified", second)
+
+    def test_connection(self):
         with socket.create_connection((self.host, self.port), timeout=2) as sock:
             sock.sendall(b"GET /index.html HTTP/1.1\r\nHost: localhost\r\nConnection: keep-alive\r\n\r\n")
             response = sock.recv(4096).decode("utf-8", errors="replace")
             self.assertIn("200 OK", response)
             self.assertIn("Connection: keep-alive", response)
 
-        response = self.send_request("GET /index.html HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n")
+        response = self.request_text("GET /index.html HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n")
         self.assertIn("200 OK", response)
         self.assertIn("Connection: close", response)
 
-    def test_persistent_connection_two_requests(self):
+    def test_keep_alive_two_requests(self):
         with socket.create_connection((self.host, self.port), timeout=2) as sock:
             first = b"GET /index.html HTTP/1.1\r\nHost: localhost\r\nConnection: keep-alive\r\n\r\n"
             second = b"GET /Page2.html HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n"
@@ -204,7 +219,7 @@ class TestHTTPServer(unittest.TestCase):
             self.assertIn(b"200 OK", data2)
             self.assertIn(b"Connection: close", data2)
 
-    def test_forbidden_log_keep_alive_has_content_length(self):
+    def test_403_keep_alive_length(self):
         with socket.create_connection((self.host, self.port), timeout=2) as sock:
             req = b"GET /log/server.log HTTP/1.1\r\nHost: localhost\r\nConnection: keep-alive\r\n\r\n"
             sock.sendall(req)
