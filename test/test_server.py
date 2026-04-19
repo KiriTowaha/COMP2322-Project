@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 class TestHTTPServer(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.host = "127.0.1"
+        cls.host = "127.0.0.1"
         cls.port = 80
 
         env = os.environ.copy()
