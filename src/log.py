@@ -13,10 +13,13 @@ def write_log(client_ip, status, method=None, path=None, version=None, connectio
     client_info = client_host_and_ip(client_ip)
     file_name = requested_file_name(path)
     response_type = status
+    method_text = method or "-"
+    connection_text = connection or "-"
 
     with log_lock:
         with open(LOG_FILE, "a") as log:
             time_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             log.write(
-                f"{time_str} | Client: {client_info} | File: {file_name} | Response: {response_type}\n"
+                f"{time_str} | Client: {client_info} | Method: {method_text} | "
+                f"File: {file_name} | Response: {response_type} | Connection: {connection_text}\n"
             )
