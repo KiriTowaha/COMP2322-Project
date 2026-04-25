@@ -1,6 +1,7 @@
 import os
 import datetime
 import mimetypes
+import socket
 
 def get_request_headers(request_lines):
     headers = {}
@@ -36,6 +37,24 @@ def get_last_modified(file_path):
         os.path.getmtime(file_path), tz=datetime.timezone.utc
     )
     return modified_time.replace(microsecond=0)
+
+def client_host_and_ip(client_address):
+    ip_address = client_address[0] if isinstance(client_address, (tuple, list)) else str(client_address)
+    try:
+        hostname = socket.gethostbyaddr(ip_address)[0]
+    except OSError:
+        hostname = ip_address
+    return f"{hostname}/{ip_address}"
+
+def requested_file_name(path):
+    if not path:
+        return "-"
+    clean_path = path.split("?", 1)[0].split("#", 1)[0]
+    if clean_path in ("", "/"):
+        return "index.html"
+    file_name = os.path.basename(clean_path.rstrip("/"))
+    return file_name if file_name else clean_path.strip("/")
+
 def serve_file(file_path):
     try:
         mime_type, _ = mimetypes.guess_type(file_path)

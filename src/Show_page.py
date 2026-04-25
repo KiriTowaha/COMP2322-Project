@@ -2,7 +2,7 @@ from .http_utils import get_last_modified, format_http_date, parse_http_date
 from .http_response import build_response, build_text_response
 from .log import write_log
 
-def handle_page_request(html_file_path, headers, connectionSocket, connection_header, addr, method):
+def handle_page_request(html_file_path, headers, connectionSocket, connection_header, addr, method, path, version):
     try:
         last_modified = get_last_modified(html_file_path)
         last_modified_text = format_http_date(last_modified)
@@ -19,7 +19,7 @@ def handle_page_request(html_file_path, headers, connectionSocket, connection_he
                             "Connection": connection_header,
                         },
                     )
-                    write_log(addr, "304 Not Modified")
+                    write_log(addr, "304 Not Modified", method, path, version, connection_header)
                     connectionSocket.sendall(response.encode("utf-8"))
                     if connection_header == "close":
                         return
@@ -41,10 +41,10 @@ def handle_page_request(html_file_path, headers, connectionSocket, connection_he
                 "Connection": connection_header,
             },
         )
-        write_log(addr, "200 OK")
+        write_log(addr, "200 OK", method, path, version, connection_header)
         connectionSocket.sendall(response.encode("utf-8"))
 
     except FileNotFoundError:
         response = build_text_response(404, "Error: File not found.\n", connection_header, method=method)
-        write_log(addr, "404 Not Found")
+        write_log(addr, "404 Not Found", method, path, version, connection_header)
         connectionSocket.sendall(response.encode("utf-8"))

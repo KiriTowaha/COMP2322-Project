@@ -8,12 +8,16 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 
+def free_port(host):
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.bind((host, 0))
+        return sock.getsockname()[1]
 
 class TestHTTPServer(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.host = "127.0.0.1"
-        cls.port = 80
+        cls.port = free_port(cls.host)
 
         env = os.environ.copy()
         env["PORT"] = str(cls.port)
@@ -33,7 +37,7 @@ class TestHTTPServer(unittest.TestCase):
             except OSError:
                 time.sleep(0.1)
 
-        raise RuntimeError("Server did not start on port 80")
+        raise RuntimeError(f"Server did not start on port {cls.port}")
 
     @classmethod
     def tearDownClass(cls):
@@ -80,7 +84,7 @@ class TestHTTPServer(unittest.TestCase):
         self.assertIn("200 OK", response)
 
     def test_404(self):
-        response = self.request_text("GET /nonexistent.html HTTP/1.1\r\nHost: localhost\r\n\r\n")
+        response = self.request_text("GET /COMP2011.html HTTP/1.1\r\nHost: localhost\r\n\r\n")
         self.assertIn("404 Not Found", response)
 
     def test_403_log(self):
@@ -149,7 +153,7 @@ class TestHTTPServer(unittest.TestCase):
         response = self.request_text("GET /log HTTP/1.1\r\nHost: localhost\r\n\r\n")
         self.assertIn("403 Forbidden", response)
 
-        response = self.request_text("GET /nonexistent.html HTTP/1.1\r\nHost: localhost\r\n\r\n")
+        response = self.request_text("GET /COMP2011.html HTTP/1.1\r\nHost: localhost\r\n\r\n")
         self.assertIn("404 Not Found", response)
 
         response = self.request_text(
